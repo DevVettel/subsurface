@@ -690,6 +690,10 @@ void DivePlannerPointsModel::setVpmbConservatism(int level)
 void DivePlannerPointsModel::setSurfacePressure(pressure_t pressure)
 {
 	diveplan.surface_pressure = pressure;
+	// plan() initializes tissue loading from d->surface_pressure before it
+	// transfers diveplan.surface_pressure to the dive computer. Keep the
+	// temporary dive in step with a desktop pressure-control edit so its
+	// initial state uses the selected atmospheric pressure too.
 	if (d) {
 		d->surface_pressure = pressure;
 		d->dcs[dcNr].surface_pressure = pressure;
@@ -699,7 +703,12 @@ void DivePlannerPointsModel::setSurfacePressure(pressure_t pressure)
 
 void DivePlannerPointsModel::initialiseDesktopPlanSurfacePressure(pressure_t pressure)
 {
-	setSurfacePressure(pressure);
+	diveplan.surface_pressure = pressure;
+	if (d) {
+		d->surface_pressure = pressure;
+		d->dcs[dcNr].surface_pressure = pressure;
+	}
+	emitDataChanged();
 }
 
 void DivePlannerPointsModel::setSalinity(int salinity)
@@ -1644,7 +1653,7 @@ QVariantMap DivePlannerPointsModel::calculatePlan(const QVariantList &cylindersD
 		}
 		firstSegment = false;
 
-		if (duration > 0)
+		if (duration >= 0)
 			plan_add_segment(diveplan, duration, depth, cylinderId, setpoint, true, divemode);
 	}
 
